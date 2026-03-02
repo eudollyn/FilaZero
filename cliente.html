@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FilaZero | Fazer Pedido</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2ecc71;
+            --bg: #0a0a0a;
+            --card: #161616;
+            --text: #ffffff;
+            --input: #222;
+        }
+
+        * { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+            margin: 0; 
+            min-height: 100vh; 
+            padding: 20px; 
+        }
+
+        .app-container { width: 100%; max-width: 400px; }
+
+        .header { text-align: center; margin-bottom: 30px; margin-top: 20px; }
+        .header h1 { font-weight: 800; font-size: 2.2rem; margin: 0; color: var(--primary); letter-spacing: -1px; }
+        .header p { color: #888; margin: 5px 0; font-size: 0.9rem; }
+
+        .card { 
+            background: var(--card); 
+            padding: 25px; 
+            border-radius: 24px; 
+            border: 1px solid #222; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
+
+        .input-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        input, select { 
+            width: 100%; 
+            background: var(--input); 
+            border: 1px solid #333; 
+            padding: 15px; 
+            border-radius: 14px; 
+            color: white; 
+            font-size: 1rem; 
+            transition: 0.3s; 
+            appearance: none;
+        }
+
+        input:focus, select:focus { border-color: var(--primary); outline: none; background: #282828; }
+
+        button { 
+            width: 100%; 
+            background: var(--primary); 
+            color: #000; 
+            border: none; 
+            padding: 18px; 
+            border-radius: 14px; 
+            font-weight: 700; 
+            font-size: 1.1rem; 
+            cursor: pointer; 
+            transition: 0.2s; 
+            margin-top: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            gap: 10px; 
+        }
+
+        button:active { transform: scale(0.97); }
+        button:disabled { background: #444; cursor: not-allowed; }
+
+        .success-card { display: none; text-align: center; padding: 40px 20px; animation: fadeIn 0.5s ease; }
+        .success-card i { color: var(--primary); margin-bottom: 20px; }
+        .success-card h2 { font-size: 1.8rem; margin-bottom: 10px; }
+        .success-card p { color: #aaa; line-height: 1.5; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div id="form-area">
+            <div class="header">
+                <h1>FilaZero 🍺</h1>
+                <p>Peça pelo celular e retire no balcão</p>
+            </div>
+
+            <div class="card">
+                <div class="input-group">
+                    <label>Seu Nome</label>
+                    <input type="text" id="nome" placeholder="Ex: Marcos Silva">
+                </div>
+
+                <div class="input-group">
+                    <label>Seu WhatsApp</label>
+                    <input type="tel" id="whatsapp" placeholder="Ex: 82999990000">
+                </div>
+
+                <div class="input-group">
+                    <label>Escolha o Produto</label>
+                    <select id="produto">
+                        <option value="">Carregando cardápio...</option>
+                    </select>
+                </div>
+
+                <button id="btn-enviar" onclick="fazerPedido()">
+                    Confirmar Pedido <i data-lucide="send"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="success-area" class="success-card">
+            <i data-lucide="check-circle" size="80"></i>
+            <h2>Tudo certo!</h2>
+            <p>Seu pedido foi enviado para a produção.<br>Fique de olho no seu <b>WhatsApp</b>, avisaremos por lá assim que puder buscar!</p>
+            <button onclick="window.location.reload()" style="background: #222; color: #fff; margin-top: 30px; font-size: 0.9rem;">
+                Fazer outro pedido
+            </button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // 1. BUSCA PRODUTOS
+        async function carregarCardapio() {
+            try {
+                // USANDO O SEU IP 192.168.0.16
+                const res = await fetch('http://192.168.0.16:3000/produtos');
+                const produtos = await res.json();
+                
+                const select = document.getElementById('produto');
+                
+                if (produtos.length === 0) {
+                    select.innerHTML = '<option value="">Nenhum produto disponível</option>';
+                    return;
+                }
+
+                select.innerHTML = produtos.map(p => `
+                    <option value="${p.nome}"> ${p.nome} — R$ ${p.preco}</option>
+                `).join('');
+
+            } catch (error) {
+                console.error("Erro ao carregar produtos:", error);
+                document.getElementById('produto').innerHTML = '<option value="">Erro ao carregar menu</option>';
+            }
+        }
+
+        // 2. ENVIA PEDIDO (Corrigido)
+        async function fazerPedido() {
+            const nome = document.getElementById('nome').value;
+            const whatsapp = document.getElementById('whatsapp').value;
+            const produto = document.getElementById('produto').value;
+            const btn = document.getElementById('btn-enviar');
+
+            if (!nome || !whatsapp || !produto) {
+                alert("Por favor, preencha todos os campos!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Processando...";
+
+            const dados = { nome, whatsapp, produto };
+
+            try {
+                // CORREÇÃO AQUI: Link direto no fetch e rota /pedidos
+                const response = await fetch('http://192.168.0.16:3000/pedidos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dados)
+                });
+
+                if (response.ok) {
+                    document.getElementById('form-area').style.display = 'none';
+                    document.getElementById('success-area').style.display = 'block';
+                    lucide.createIcons();
+                } else {
+                    alert("Erro no servidor.");
+                    btn.disabled = false;
+                    btn.innerText = "Confirmar Pedido";
+                }
+
+            } catch (error) {
+                alert("Erro de conexão! Verifique se o server.js está rodando.");
+                btn.disabled = false;
+                btn.innerText = "Confirmar Pedido";
+            }
+        }
+
+        carregarCardapio();
+    </script>
+</body>
+</html>
